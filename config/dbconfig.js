@@ -1,7 +1,7 @@
 
 const mongoose = require('mongoose'); // thư viện con cầy lỏd
 const dotenv = require('dotenv');
-dotenv.config();
+
 const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI, {

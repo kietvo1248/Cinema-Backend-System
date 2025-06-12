@@ -1,6 +1,9 @@
+require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors'); // Import cors để xử lý Cross-Origin Resource Sharing
 const authRoutes = require('./routes/auth'); // Import các tuyến xác thực
+const uploadRoutes = require('./routes/upload');
+const movieRoutes = require('./routes/movie.routes');
 const connectDB = require('./config/dbconfig'); // Import hàm kết nối DB từ thư mục config
 
 const app = express();
@@ -17,6 +20,8 @@ connectDB();
 // Định nghĩa các tuyến (routes) API
 // Mọi yêu cầu đến /api/auth sẽ được xử lý bởi authRoutes
 app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/movies', movieRoutes);
 
 // Tuyến mặc định cho kiểm tra server
 app.get('/', (req, res) => {
