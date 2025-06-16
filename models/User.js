@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
     },
     email: { // Thêm trường email
         type: String,
-        required: true,
+        // required: true,
         unique: [true, 'email đã tồn tại'], // Đảm bảo email là duy nhất
         trim: true,
         // lowercase: true, // Chuyển đổi email thành chữ thường
@@ -57,19 +57,19 @@ const userSchema = new mongoose.Schema({
     },
     id_card: { // Thêm trường id_card
         type: String,
-        required: true,
+        // required: true,
         unique: true, // Đảm bảo id_card là duy nhất
         trim: true
     },
     phone: { // Thêm trường phone
         type: String,
-        required: true,
+        // required: true,
         unique: true, // Đảm bảo phone là duy nhất
         trim: true
     },
     address: { // Thêm trường address
         type: String,
-        required: true,
+        // required: true,
         trim: true
     },
     is_actived: { // Trường is_actived để đánh dấu người dùng đã kích hoạt hay chưa

@@ -4,7 +4,7 @@ const authRoutes = require('./routes/auth'); // Import các tuyến xác thực
 const connectDB = require('./config/dbconfig'); // Import hàm kết nối DB từ thư mục config
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 
 app.use(cors());
