@@ -1,9 +1,25 @@
+// import library
 const express = require('express');
 const router = express.Router();
-const User = require('../models/User'); // Import User model
 const jwt = require('jsonwebtoken'); // Import jsonwebtoken để tạo và xác minh token
-const authMiddleware = require('../middleware/authMiddleware'); // Import middleware xác thực JWT
+const authMiddleware = require('../../middleware/authMiddleware'); // Import middleware xác thực JWT
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer'); 
+const dotenv = require('dotenv'); 
+// import model
+const User = require('../../models/User'); // Import User model
+const form = require('../authentication/view/forgotPasswordForm');
+
+dotenv.config(); 
+
+// Cấu hình Nodemailer transporter(không được sờ)
+const transporter = nodemailer.createTransport({
+    service: process.env.EMAIL_SERVICE, 
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // @route   POST /api/auth/register
 // @desc    Đăng ký người dùng mới
@@ -145,7 +161,7 @@ router.put('/change-password', authMiddleware, async (req, res) => {
         // Tìm người dùng bằng ID từ JWT (req.user.id)
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ message: 'Người dùng đéo tìm thấy.' });
+            return res.status(404).json({ message: 'Người dùng méo tìm thấy.' });
         }
 
         // So sánh mật khẩu hiện tại với mật khẩu đã lưu trong DB
@@ -169,59 +185,140 @@ router.put('/change-password', authMiddleware, async (req, res) => {
     }
 });
 
-
-// @route   PUT /api/auth/update-profile
-// @desc    Cập nhật thông tin profile của người dùng đã đăng nhập
-// @access  Private
-router.put('/update-profile', authMiddleware, async (req, res) => {
-    const { fullname, email, gender, id_card, phone, address } = req.body;
+// @route   POST /api/auth/forgot-password
+// @desc    Gửi email đặt lại mật khẩu
+// @access  Public
+router.post('/forgot-password', async (req, res) => {
+    const { email } = req.body;
 
     try {
-        // check người dùng bằng jwt
-        const user = await User.findById(req.user.id);
-
+        // Tìm người dùng theo email
+        const user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tìm thấy.' });
         }
+        // tạo mã
+        const resetCode = Math.floor(10000 + Math.random() * 90000).toString(); // random 5 số
+        const resetExpires = Date.now() + 10 * 60 * 1000; // Đặt thời gian hết hạn cho mã
 
-        // Cập nhật các trường nếu chúng được cung cấp trong request body
-        if (fullname !== undefined) user.fullname = fullname;
-        if (email !== undefined) user.email = email;
-        if (gender !== undefined) user.gender = gender;
-        if (id_card !== undefined) user.id_card = id_card;
-        if (phone !== undefined) user.phone = phone;
-        if (address !== undefined) user.address = address;
+        // 4. Lưu mã và thời gian hết hạn vào người dùng
+        User.resetPasswordCode = resetCode;
+        User.resetPasswordExpires = resetExpires;
+        await User.save();
 
- 
-        await user.save();
+        let emailContent = form;
+        emailContent = emailContent.replace('{{resetCode}}', resetCode);
 
-        // Trả về thông tin người dùng đã cập nhật (không bao gồm mật khẩu)
-        const updatedUser = await User.findById(req.user.id).select('-password');
-        res.status(200).json({
-            message: 'Thông tin tài khoản đã được cập nhật thành công!',
-            user: updatedUser
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: User.email,
+            subject: 'Mã đặt lại mật khẩu của bạn',
+            html: emailContent
+        };
+        // Gửi email với mã đặt lại mật khẩu
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('Lỗi khi gửi email:', error);
+                return res.status(500).json({ message: 'Lỗi máy chủ khi gửi email.' });
+            }
+            res.status(200).json({ message: 'Mã đặt lại mật khẩu đã được gửi đến email của bạn.' });
         });
 
-    } catch (error) {
-        // Xử lý lỗi xác thực của Mongoose (ví dụ: email không hợp lệ, id_card/phone trùng lặp)
-        if (error.name === 'ValidationError') {
-            const errors = {};
-            for (let field in error.errors) {
-                errors[field] = error.errors[field].message;
-            }
-            return res.status(400).json({ message: 'Lỗi xác thực khi cập nhật thông tin', errors: errors });
-        }
-        // Xử lý lỗi trùng lặp từ MongoDB (ví dụ: email/id_card/phone đã tồn tại)
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyValue)[0];
-            const value = error.keyValue[field];
-            return res.status(400).json({ message: `Lỗi trùng lặp: '${field}' với giá trị '${value}' đã tồn tại.` });
+
+    }catch (error) {
+        console.error('Lỗi khi yêu cầu đặt lại mật khẩu:', error.message);
+        res.status(500).send('Lỗi máy chủ.');
+    }
+
+
+});
+// @route   POST /api/auth/verify-reset-code
+// @desc    Xác minh mã đặt lại mật khẩu và cung cấp token tạm thời
+// @access  Public
+router.post('/verify-reset-code', async (req, res) => {
+    const { email, resetCode } = req.body;
+    try {
+        const user = await User.findOne({
+            email,
+            resetPasswordCode: resetCode,
+            resetPasswordExpires: { $gt: Date.now() } //nếu mã chua hết hạn == true , nếu mã đã hết hạn == false (mày cút)
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Mã xác minh không hợp lệ hoặc đã hết hạn.' }); //hết hạn r
         }
 
-        console.error('Lỗi khi cập nhật thông tin người dùng:', error.message);
-        res.status(500).send('Lỗi máy chủ khi cập nhật thông tin.');
+        // Mã hợp lệ, tạo một jwt tạm thời cho phép người dùng đặt lại mật khẩu
+        // Token này chỉ dùng để xác thực cho bước reset-password
+        const resetTokenPayload = {
+            user: {
+                id: user.id
+            }
+        };
+
+        const resetToken = jwt.sign(
+            resetTokenPayload,
+            process.env.JWT_SECRET,
+            { expiresIn: '10m' } // hết hạn trong 10min
+        );
+
+        res.status(200).json({ message: 'Mã xác minh thành công.', resetToken });
+
+    } catch (error) {
+        console.error('Lỗi khi xác minh mã đặt lại mật khẩu:', error.message);
+        res.status(500).send('Lỗi máy chủ.');
     }
 });
+
+// @route   POST /api/auth/reset-password
+// @desc    Đặt lại mật khẩu mới cho người dùng
+router.post('/reset-password', async (req, res) => {
+    const { newPassword, confirmPassword} = req.body;
+    const { resetToken } = req.headers;
+
+    if (!resetToken) {
+        return res.status(401).json({ message: 'Không có token đặt lại mật khẩu. Vui lòng thực hiện lại quy trình quên mật khẩu.' });
+    }
+
+    // bước dưới tương tự như reset password
+    if (!newPassword || !confirmPassword) {
+        return res.status(400).json({ message: 'Vui lòng cung cấp mật khẩu mới và xác nhận mật khẩu mới.' });
+    }
+    if (newPassword.length < 5) {
+        return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 5 ký tự.' });
+    }
+    if (newPassword !== confirmPassword) {
+        return res.status(400).json({ message: 'Mật khẩu mới và xác nhận mật khẩu mới không khớp.' });
+    }
+
+    try {
+        // Xác minh resetToken (tương tự authMiddleware nhưng không cần gán req.user)
+        const actualResetToken = resetToken.startsWith('Bearer ') ? resetToken.slice(7, resetToken.length) : resetToken;
+        const decoded = jwt.verify(actualResetToken, process.env.JWT_SECRET);
+        
+        // Tìm người dùng bằng ID từ payload của resetToken
+        const user = await User.findById(decoded.user.id);
+        if (!user) {
+            return res.status(404).json({ message: 'Người dùng không tìm thấy.' });
+        }
+        user.password = newPassword;
+        // không xài nữa thì vứt
+        user.resetPasswordCode = undefined;
+        user.resetPasswordExpires = undefined;
+
+        await user.save();
+
+        res.status(200).json({ message: 'Mật khẩu đã được đặt lại thành công!' });
+
+        } catch (error) {
+        if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.' });
+        }
+        console.error('Lỗi khi đặt lại mật khẩu:', error.message);
+        res.status(500).send('Lỗi máy chủ.');
+    }
+});
+
 
 
 module.exports = router;

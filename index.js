@@ -1,7 +1,11 @@
 const express = require('express');
 const cors = require('cors'); // Import cors để xử lý Cross-Origin Resource Sharing
-const authRoutes = require('./routes/auth'); // Import các tuyến xác thực
 const connectDB = require('./config/dbconfig'); // Import hàm kết nối DB từ thư mục config
+
+// Import các tuyến (routes) từ thư mục routes
+const authRoutes = require('./routes/authentication/auth'); 
+const userFeatureRoutes = require('./routes/userFeature/userFeatureRoute'); // Import các tuyến người dùng
+// Khởi tạo ứng dụng Express
 
 const app = express();
 const PORT = process.env.PORT;
@@ -15,8 +19,8 @@ app.use(express.json());
 connectDB();
 
 // Định nghĩa các tuyến (routes) API
-// Mọi yêu cầu đến /api/auth sẽ được xử lý bởi authRoutes
 app.use('/api/auth', authRoutes);
+app.use('/api/user', userFeatureRoutes);
 
 // Tuyến mặc định cho kiểm tra server
 app.get('/', (req, res) => {

@@ -1,7 +1,5 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
 
 const userSchema = new mongoose.Schema({
     username: {
@@ -30,7 +28,7 @@ const userSchema = new mongoose.Schema({
     },
     role: { // Thêm trường role
         type: String,
-        enum: ['user', 'admin'], // Ví dụ: chỉ cho phép các giá trị 'user' hoặc 'admin'
+        enum: ['customer','employee', 'admin'], // Ví dụ: chỉ cho phép các giá trị 'user' hoặc 'admin'
         default: 'user' // Mặc định là 'user' nếu không được cung cấp
     },
     email: { // Thêm trường email
@@ -79,7 +77,9 @@ const userSchema = new mongoose.Schema({
     is_deleted: { // Thêm trường is_deleted
         type: Boolean,
         default: false
-    }
+    },
+    resetPasswordCode: String, //lưu mã đặt lại mật khẩu
+    resetPasswordExpires: Date  // hạn sử dụng của mã
 }, {
     timestamps: true, // Tự động thêm createdAt và updatedAt
     collection: 'users' // chỉnh sửa collection trong MongoDB ở đây
