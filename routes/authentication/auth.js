@@ -202,16 +202,16 @@ router.post('/forgot-password', async (req, res) => {
         const resetExpires = Date.now() + 10 * 60 * 1000; // Đặt thời gian hết hạn cho mã
 
         // 4. Lưu mã và thời gian hết hạn vào người dùng
-        User.resetPasswordCode = resetCode;
-        User.resetPasswordExpires = resetExpires;
-        await User.save();
+        user.resetPasswordCode = resetCode;
+        user.resetPasswordExpires = resetExpires;
+        await user.save();
 
         let emailContent = form;
-        emailContent = emailContent.replace('{{resetCode}}', resetCode);
+        emailContent = emailContent.replace('{{RESET_CODE}}', resetCode);
 
         const mailOptions = {
             from: process.env.EMAIL_USER,
-            to: User.email,
+            to: user.email,
             subject: 'Mã đặt lại mật khẩu của bạn',
             html: emailContent
         };
@@ -274,7 +274,7 @@ router.post('/verify-reset-code', async (req, res) => {
 // @desc    Đặt lại mật khẩu mới cho người dùng
 router.post('/reset-password', async (req, res) => {
     const { newPassword, confirmPassword} = req.body;
-    const { resetToken } = req.headers;
+    const resetToken = req.header('Authorization');
 
     if (!resetToken) {
         return res.status(401).json({ message: 'Không có token đặt lại mật khẩu. Vui lòng thực hiện lại quy trình quên mật khẩu.' });
