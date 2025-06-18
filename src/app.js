@@ -25,10 +25,6 @@ app.use(cors());
 // Sử dụng express.json() để phân tích cú pháp các yêu cầu JSON từ client
 app.use(express.json());
 
-// Gọi hàm kết nối database
-connectDB();
-
-
 
 // Định nghĩa các tuyến (routes) API
 app.use('/api/auth', authRoutes);
@@ -36,13 +32,5 @@ app.use('/api/user', userFeatureRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/movies', movieRoutes);
 
-// Tuyến mặc định cho kiểm tra server
-app.get('/', (req, res) => {
-    res.send('Chào mừng đến với API Backend Đăng nhập!');
-});
 
-// Khởi động server
-app.listen(PORT, () => {
-    console.log(`Server đang chạy trên cổng ${PORT}`);
-    console.log(`Swagger Docs tại: http://localhost:${PORT}/api-docs`);
-});
+module.exports = app;

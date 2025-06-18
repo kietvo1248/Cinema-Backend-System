@@ -7,7 +7,7 @@ const cloudinary = require('../../config/cloudinary'); // Cloudinary config đã
 
 // Multer config – Lưu file tạm vào thư mục "uploads/"
 const upload = multer({
-  dest: 'uploads/',
+  dest: '.src/uploads/',
 
   // (tuỳ chọn) kiểm tra loại file
   fileFilter: (req, file, cb) => {

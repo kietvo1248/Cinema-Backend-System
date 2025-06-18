@@ -5,7 +5,7 @@ const fs = require('fs');
 const cloudinary = require('../../config/cloudinary');
 const Movie = require('../../models/Movie');
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({ dest: './src/uploads/' });
 
 /**
  * @swagger
