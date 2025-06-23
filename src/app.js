@@ -5,13 +5,13 @@ const connectDB = require('./config/dbconfig'); // Import hàm kết nối DB t�
 
 // Import các tuyến (routes) từ thư mục routes
 const authRoutes = require('./routes/authentication/auth'); 
-const userFeatureRoutes = require('./routes/userFeature/userFeatureRoute'); // Import các tuyến người dùng
+const profileRoutes = require('./routes/userFeature/profileRoutes');
+const featureRoutes = require('./routes/userFeature/featureRoutes');
 const uploadRoutes = require('./routes/movie/uploadRoute');
 const movieRoutes = require('./routes/movie/movieRoutes');
 // Khởi tạo ứng dụng Express
 
 const app = express();
-const PORT = process.env.PORT;
 
 // Swagger setup
 const swaggerUi = require('swagger-ui-express');
@@ -26,11 +26,15 @@ app.use(cors());
 app.use(express.json());
 
 
-// Định nghĩa các tuyến (routes) API
+// Định nghĩa các tuyến (routes) API người dùng
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userFeatureRoutes);
+app.use('/api/user', profileRoutes);
+app.use('/api/feature', featureRoutes);
+// Định nghĩa các tuyến (routes) cho upload và movie
 app.use('/api/upload', uploadRoutes);
 app.use('/api/movies', movieRoutes);
+
+app.use('/api/bookings', require('../src/routes/booking/bookingManagement'));
 
 
 module.exports = app;

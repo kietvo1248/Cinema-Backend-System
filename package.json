@@ -17,10 +17,11 @@
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^6.17.0",
     "mongoose": "^8.15.1",
-    "nodemailer": "^7.0.3",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^7.0.3",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.1.0"
   }
 }
