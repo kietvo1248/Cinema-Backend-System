@@ -9,6 +9,7 @@ const profileRoutes = require('./routes/userFeature/profileRoutes');
 const featureRoutes = require('./routes/userFeature/featureRoutes');
 const uploadRoutes = require('./routes/movie/uploadRoute');
 const movieRoutes = require('./routes/movie/movieRoutes');
+const customerManagementRoutes = require('./routes/admin/userManagementRoutes'); // Quản lý người dùng
 // Khởi tạo ứng dụng Express
 
 const app = express();
@@ -30,6 +31,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/user', profileRoutes);
 app.use('/api/feature', featureRoutes);
+// định nghĩa các tuyến quản lý người dùng
+app.use('/api/admin/customers', customerManagementRoutes);
+
 // Định nghĩa các tuyến (routes) cho upload và movie
 app.use('/api/upload', uploadRoutes);
 app.use('/api/movies', movieRoutes);

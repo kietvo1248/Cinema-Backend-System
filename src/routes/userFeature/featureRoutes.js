@@ -3,14 +3,14 @@ const router = express.Router();
 const Movie = require('../../models/Movie'); 
 const Booking = require('../../models/Booking'); 
 const User = require('../../models/User');     
-const authMiddleware = require('../../middleware/authMiddleware'); // Middleware xác thực người dùng
+// const authMiddleware = require('../../middleware/authMiddleware'); // Middleware xác thực người dùng
 
 // @route   GET /api/customer/movies
 // @desc    Lấy danh sách các bộ phim và lịch chiếu có sẵn
 // @access  Private (Người dùng đã đăng nhập)
 // Query Params: search (tên phim), date (yyyy-mm-dd)
-router.get('/search', authMiddleware, async (req, res) => {
-    const { search, date } = req.query; // 'date' here should ideally be a YYYY-MM-DD string
+router.get('/search', async (req, res) => {
+    const { search, date } = req.query; 
     let query = { is_deleted: false }; // Always exclude deleted movies
 
     try {
