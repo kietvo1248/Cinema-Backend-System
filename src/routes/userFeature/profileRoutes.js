@@ -34,7 +34,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
 // @desc    Cập nhật thông tin profile của người dùng đã đăng nhập
 // @access  Private
 router.put('/update-profile', authMiddleware, async (req, res) => {
-    const { fullname, email, gender, id_card, phone, address } = req.body;
+    const { fullname, email, gender, id_card, phone, address, date_of_birth } = req.body;
 
     try {
         // check người dùng bằng jwt
@@ -51,6 +51,7 @@ router.put('/update-profile', authMiddleware, async (req, res) => {
         if (id_card !== undefined) user.id_card = id_card;
         if (phone !== undefined) user.phone = phone;
         if (address !== undefined) user.address = address;
+        if (date_of_birth !== undefined) user.date_of_birth = date_of_birth;
 
  
         await user.save();

@@ -17,9 +17,12 @@ const options = {
       { name: 'Movie', description: 'Quản lý phim' },
       { name: 'Auth', description: 'Xác thực người dùng' },
       { name: 'User', description: 'Tính năng người dùng' },
+      { name: 'Home', description: 'Trang chủ' },
+      { name: 'Promotion', description: 'Khuyến mãi người dùng' },
+
     ]
   },
-  apis: ['./routes/**/*.js'], // ✅ sửa ở đây
+  apis: ['./src/routes/**/*.js'], // ✅ sửa ở đây
 };
 
 const swaggerSpec = swaggerJSDoc(options);

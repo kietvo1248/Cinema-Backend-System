@@ -4,9 +4,17 @@ const multer = require('multer');
 const fs = require('fs');
 const cloudinary = require('../../config/cloudinary');
 const Movie = require('../../models/Movie');
+const constants = require('constants');
 
 const upload = multer({ dest: './src/uploads/' });
+const dayjs = require('dayjs');
 
+const calculateStatus = (start, end) => {
+  const today = dayjs();
+  if (today.isBefore(dayjs(start))) return 'coming_soon';
+  if (today.isAfter(dayjs(end))) return 'ended';
+  return 'now_showing';
+};
 /**
  * @swagger
  * /api/movies:
@@ -40,7 +48,7 @@ const upload = multer({ dest: './src/uploads/' });
  *                 type: string
  *               trailer_link:
  *                 type: string
- *               type:
+ *               genres:
  *                 type: string
  *               description:
  *                 type: string
@@ -60,6 +68,22 @@ const upload = multer({ dest: './src/uploads/' });
  *                 type: string
  *                 format: uri
  *                 description: Đường dẫn ảnh đã upload lên Cloudinary
+ *               age_limit:
+ *                 type: string
+ *               status:
+ *                 type: string
+ *                 enum: [now_showing, coming_soon, ended]
+ *               is_hot:
+ *                 type: boolean
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *               banner_url:
+ *                 type: string
+ *                 format: uri
+ *               banner:
+ *                 type: string
+ *                 format: binary 
  *     responses:
  *       201:
  *         description: Phim được thêm thành công
@@ -67,25 +91,48 @@ const upload = multer({ dest: './src/uploads/' });
  *         description: Dữ liệu không hợp lệ
 
  */
-router.post('/', upload.single('image'), async (req, res) => {
+router.post('/', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'banner', maxCount: 1 }
+]), async (req, res) => {
   try {
-    if (!req.file) {
+    const { files, body } = req;
+
+    if (!files.image || files.image.length === 0) {
       return res.status(400).json({ error: 'Vui lòng chọn ảnh poster' });
     }
 
-    const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+    const imageFile = files.image[0];
+    const imageUpload = await cloudinary.uploader.upload(imageFile.path, {
       folder: 'movies'
     });
+    fs.unlinkSync(imageFile.path); // Xóa file tạm sau khi upload
 
-    fs.unlink(req.file.path, err => {
-      if (err) console.error('Lỗi xoá file tạm:', err);
-    });
+    let bannerUrl = '';
+    if (files.banner && files.banner.length > 0) {
+      const bannerFile = files.banner[0];
+      const bannerUpload = await cloudinary.uploader.upload(bannerFile.path, {
+        folder: 'movies'
+      });
+      fs.unlinkSync(bannerFile.path);
+      bannerUrl = bannerUpload.secure_url;
+    }
+
+    // Xử lý showtimes (chuỗi thành mảng)
+    if (typeof body.showtimes === 'string') {
+      body.showtimes = body.showtimes.split(',').map(s => s.trim());
+    }
+
+    const status = calculateStatus(body.start_date, body.end_date);
 
     const newMovie = new Movie({
-      ...req.body,
-      image_url: uploadResult.secure_url,
-      is_deleted: false
+      ...body,
+      image_url: imageUpload.secure_url,
+      banner_url: bannerUrl,
+      is_deleted: false,
+      status
     });
+
 
     const saved = await newMovie.save();
     console.log('✅ Phim đã lưu:', saved);
@@ -107,6 +154,26 @@ router.post('/', upload.single('image'), async (req, res) => {
  *       200:
  *         description: Danh sách phim
  */
+
+//VIEW DETAILS FILM 
+// router.get('/:name', async (req, res) => {
+
+//   try {
+//     const movies = await Movie.find({ name: req.params.name });
+//     if (movies.length === 0) {
+//       return res.status(404).json({ error: 'Không tìm thấy phim' });
+//     }
+//     // const moviesNotDeleted = await Movie.find({ is_deleted: false });
+
+
+//     res.json(movies);
+//   } catch (err) {
+//     res.status(500).json({ error: 'Không thể lấy danh sách phim' });
+//   }
+// }); 
+
+//VIEW ALL FILM
+
 router.get('/', async (req, res) => {
   try {
     const movies = await Movie.find({ is_deleted: false });
@@ -115,6 +182,7 @@ router.get('/', async (req, res) => {
     res.status(500).json({ error: 'Không thể lấy danh sách phim' });
   }
 });
+
 
 /**
  * @swagger
@@ -198,20 +266,35 @@ router.get('/:id', async (req, res) => {
  *       404:
  *         description: Không tìm thấy phim
  */
-router.put('/:id', upload.single('image'), async (req, res) => {
+router.put('/:id', upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'banner', maxCount: 1 }
+]), async (req, res) => {
   try {
     const updateData = { ...req.body };
 
-    if (req.file) {
-      const uploadResult = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'movies'
+    // Nếu có file poster
+    if (req.files?.image?.length) {
+      const imageFile = req.files.image[0];
+      const uploadImage = await cloudinary.uploader.upload(imageFile.path, {
+        folder: 'movies/images'
       });
+      updateData.image_url = uploadImage.secure_url;
+      fs.unlinkSync(imageFile.path);
+    }
 
-      updateData.image_url = uploadResult.secure_url;
-
-      fs.unlink(req.file.path, err => {
-        if (err) console.error('Lỗi xoá file tạm:', err);
+    // Nếu có file banner
+    if (req.files?.banner?.length) {
+      const bannerFile = req.files.banner[0];
+      const uploadBanner = await cloudinary.uploader.upload(bannerFile.path, {
+        folder: 'movies/banners'
       });
+      updateData.banner_url = uploadBanner.secure_url;
+      fs.unlinkSync(bannerFile.path);
+    }
+
+    if (updateData.start_date && updateData.end_date) {
+      updateData.status = calculateStatus(updateData.start_date, updateData.end_date);
     }
 
     const updatedMovie = await Movie.findByIdAndUpdate(req.params.id, updateData, {
@@ -219,10 +302,14 @@ router.put('/:id', upload.single('image'), async (req, res) => {
       runValidators: true
     });
 
-    if (!updatedMovie) return res.status(404).json({ error: 'Không tìm thấy phim để cập nhật' });
+
+    if (!updatedMovie) {
+      return res.status(404).json({ error: 'Không tìm thấy phim để cập nhật' });
+    }
 
     res.json({ message: 'Cập nhật thành công!', data: updatedMovie });
   } catch (err) {
+    console.error('❌ Lỗi cập nhật:', err.message);
     res.status(400).json({ error: 'Cập nhật thất bại', details: err.message });
   }
 });

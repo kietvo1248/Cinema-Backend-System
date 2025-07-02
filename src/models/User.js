@@ -1,13 +1,11 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid'); // THÊM: Import uuid để tạo UserID
+const Counter = require('./Counter'); // Import mô hình Counter để sử dụng bộ đếm số tuần tự
 
 const userSchema = new mongoose.Schema({
     userId: {
         type: String,
-        default: uuidv4, 
-        unique: true,    
-        required: true   
+        unique: true,     
     },
     username: {
         type: String,
@@ -36,11 +34,11 @@ const userSchema = new mongoose.Schema({
     role: { // Thêm trường role
         type: String,
         enum: ['customer','employee', 'admin'], // Ví dụ: chỉ cho phép các giá trị 'user' hoặc 'admin'
-        default: 'user' // Mặc định là 'user' nếu không được cung cấp
+        // default: 'user' // Mặc định là 'user' nếu không được cung cấp
     },
     email: { // Thêm trường email
         type: String,
-        // required: true,
+        required: true,
         unique: [true, 'email đã tồn tại'], // Đảm bảo email là duy nhất
         trim: true,
         // lowercase: true, // Chuyển đổi email thành chữ thường
@@ -51,6 +49,11 @@ const userSchema = new mongoose.Schema({
             message: props => `${props.value} không phải là một địa chỉ email hợp lệ!`
         }
     },
+    date_of_birth: {
+    type: Date,
+    required: false // Đặt true nếu bạn muốn bắt buộc nhập ngày sinh
+    },
+
     // datetime: {
     //     type: Date,
     //     default: Date.now // Tự động lưu thời gian tạo document
@@ -62,8 +65,8 @@ const userSchema = new mongoose.Schema({
     },
     id_card: { // Thêm trường id_card
         type: String,
-        // required: true,
-        unique: true, // Đảm bảo id_card là duy nhất
+        
+        
         trim: true
     },
     phone: { // Thêm trường phone
@@ -93,6 +96,21 @@ const userSchema = new mongoose.Schema({
 });
 
     userSchema.pre('save', async function(next) {
+        if (this.isNew) {
+        try {
+            
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'userId' }, 
+                { $inc: { seq: 1 } }, // Tăng giá trị seq lên 1
+                { new: true, upsert: true } // Trả về document sau khi cập nhật, tạo mới nếu không tồn tại
+            );
+
+            // Định dạng userId: "USER" + số tuần tự (đảm bảo có 9 chữ số, thêm số 0 vào đầu nếu cần)
+            this.userId = 'USER' + String(counter.seq).padStart(9, '0');
+        } catch (error) {
+            return next(error); // Chuyển lỗi nếu không thể tạo userId
+        }
+    }
     // Chỉ mã hóa mật khẩu nếu nó đã được sửa đổi (hoặc là mật khẩu mới)
     if (!this.isModified('password')) {
         return next();
