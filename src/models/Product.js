@@ -34,16 +34,16 @@ const productSchema = new mongoose.Schema({
         required: [true, 'Số lượng trong kho là bắt buộc'],
         min: [0, 'Số lượng trong kho phải lớn hơn hoặc bằng 0']
     },
-    imageUrl: {
+    image_url: { 
         type: String,
-        //required: [true, 'URL hình ảnh là bắt buộc'],
+        // required: [true, 'Product phải có hình ảnh'],
+        validate: {
+            validator: function (v) {
+                return /^https?:\/\/.+/.test(v);
+            },
+            message: props => `${props.value} không phải là URL hình ảnh hợp lệ`
+        },
         trim: true
-        // , validate: {
-        //     validator: function (v) {
-        //         return /^(http|https):\/\/[^ "]+$/.test(v); // Kiểm tra định dạng URL
-        //     },
-        //     message: 'URL hình ảnh không hợp lệ'
-        // }
     },
     is_deleted: { // Thêm trường is_deleted
         type: Boolean,

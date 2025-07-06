@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Movie = require('../../models/Movie');
+const bucket = require('../../config/cosmic');
+const MovieNews = require('../../models/MovieNews');
 
 /**
  * @swagger
@@ -59,11 +61,12 @@ router.get('/', async (req, res) => {
   try {
     const commonFields = 'name image_url trailer_link genres rating version rating_score actors description start_date end_date';
 
-    const [bannerMovies, nowShowing, comingSoon, hotMovies] = await Promise.all([
+    const [bannerMovies, nowShowing, comingSoon, hotMovies, newsRes] = await Promise.all([
       Movie.find({ banner_url: { $ne: null }, is_deleted: false }).select('banner_url'),
       Movie.find({ status: 'now_showing', is_deleted: false }).select(commonFields),
       Movie.find({ status: 'coming_soon', is_deleted: false }).select(commonFields),
-      Movie.find({ is_hot: true, is_deleted: false }).select(commonFields)
+      Movie.find({ is_hot: true, is_deleted: false }).select(commonFields),
+      MovieNews.find({ is_deleted: false }).sort({ createdAt: -1 }).limit(4) //lấy 4 tin tức mới nhất
     ]);
 
     const banners = bannerMovies
@@ -71,25 +74,15 @@ router.get('/', async (req, res) => {
       .filter(Boolean)
       .slice(0, 5);
 
-    const news = [
-      {
-        title: "Final Part of Avengers's Universe",
-        image_url: 'https://res.cloudinary.com/demo/image/upload/v123/avengers.jpg',
-        author: 'admin',
-        date: '2025-05-13',
-        short_description: "Avengers End Game is the last part of Marvel's Infinity Saga...",
-        slug: 'final-avengers'
-      },
-      {
-        title: "Spider-Man Returns",
-        image_url: 'https://res.cloudinary.com/demo/image/upload/v123/spiderman.jpg',
-        author: 'admin',
-        date: '2025-06-01',
-        short_description: "Tom Holland returns in the newest Spider-Man adventure...",
-        slug: 'spiderman-returns'
-      }
-    ];
-
+      const news = newsRes.map(item => ({
+        title: item.title,
+        image_url: item.image_url,
+        author: item.author || 'Admin',
+date: item.date || item.createdAt.toISOString().split('T')[0],
+        short_description: item.short_description,
+        slug: item.slug
+      }));
+      
     res.status(200).json({
       banners,
       nowShowing,

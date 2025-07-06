@@ -1,4 +1,3 @@
-// src/models/Combo.js
 const mongoose = require('mongoose');
 const Product = require('./Product'); // Import mô hình Product để tham chiếu
 const Counter = require('./Counter'); // Import mô hình Counter để sử dụng bộ đếm số tuần tự
@@ -31,7 +30,6 @@ const comboSchema = new mongoose.Schema({
     },
     items: [ // Mảng các sản phẩm trong combo
         {
-            // Thay đổi từ tham chiếu ObjectId sang lưu trực tiếp tên sản phẩm
             productName: {
                 type: String,
                 required: true
@@ -51,8 +49,15 @@ const comboSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
-    imageUrl: {
+    image_url: { 
         type: String,
+        // required: [true, 'Combo phải có hình ảnh'],
+        validate: {
+            validator: function (v) {
+                return /^https?:\/\/.+/.test(v);
+            },
+            message: props => `${props.value} không phải là URL hình ảnh hợp lệ`
+        },
         trim: true
     },
     isActive: { // Trạng thái kích hoạt (admin bật/tắt)
@@ -63,19 +68,17 @@ const comboSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    // Trường để lưu trạng thái hiện tại của combo (có bán hay không)
-    // Trường này sẽ được tính toán dựa trên isActive, isDeleted, startDate, endDate
     status: {
         type: String,
         enum: ['active', 'upcoming', 'expired', 'inactive', 'deleted'],
-        default: 'upcoming' // Mặc định khi tạo là upcoming nếu startDate trong tương lai
+        default: 'upcoming'
     }
 }, {
     timestamps: true,
-    collection: 'combo' // Chỉnh sửa collection trong MongoDB ở đây
+    collection: 'combo'
 });
 
-// Virtual property hoặc Pre-save hook để tự động cập nhật trạng thái
+// Pre-save hook để tạo comboID và cập nhật status
 comboSchema.pre('save', async function (next) {
     if (this.isNew) {
         try {
@@ -84,14 +87,13 @@ comboSchema.pre('save', async function (next) {
                 { $inc: { seq: 1 } },
                 { new: true, upsert: true }
             );
-            this.comboID = `COMBO-${counter.seq.toString().padStart(6, '0')}`; // Tạo productId với định dạng PROD-000001
-            next();
+            this.comboID = `COMBO-${counter.seq.toString().padStart(6, '0')}`;
         } catch (error) {
-            next(error);
+            return next(error);
         }
     }
+
     const now = new Date();
-    // Chuyển về 00:00:00 của ngày hiện tại để so sánh chỉ dựa vào ngày
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const start = new Date(this.startDate.getFullYear(), this.startDate.getMonth(), this.startDate.getDate());
@@ -106,12 +108,13 @@ comboSchema.pre('save', async function (next) {
     } else if (today > end) {
         this.status = 'expired';
     } else {
-        this.status = 'active'; // Đang trong thời gian bán và kích hoạt
+        this.status = 'active';
     }
+
     next();
 });
 
-// Có thể tạo một phương thức tĩnh để làm mới trạng thái cho nhiều combo
+// Phương thức cập nhật trạng thái hàng loạt
 comboSchema.statics.updateStatuses = async function () {
     const combos = await this.find({ isDeleted: false });
     const now = new Date();
@@ -136,7 +139,7 @@ comboSchema.statics.updateStatuses = async function () {
 
         if (combo.status !== newStatus) {
             combo.status = newStatus;
-            await combo.save({ validateBeforeSave: false }); // Bỏ qua validation để chỉ cập nhật status
+            await combo.save({ validateBeforeSave: false });
         }
     }
 };

@@ -9,6 +9,7 @@ const User = require('../../models/User');
 // @access  Private (Chỉ dành cho quản trị viên)
 router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
     try {
+        console.log('Hard delete route hit for userId:');
         // Lấy danh sách tất cả người dùng có role là 'user'
         // .select('-password') để không trả về mật khẩu đã mã hóa vì lý do bảo mật.
         const Employee = await User.find({ role: { $in: ["employee", "admin"] } }).select('-password');
@@ -178,40 +179,44 @@ router.patch('/:userId/role', authMiddleware, adminMiddleware, async (req, res) 
 });
 
 
-// @route   PATCH /api/user-management/:userId/delete
-// @desc    Xóa mềm người dùng (is_deleted = true)
+// @route   DELETE /api/admin/employees/:userId/hard_delete
+// @desc    Xóa VĨNH VIỄN người dùng theo userId
 // @access  Private (Chỉ Admin)
+// FIX: Đổi tên tuyến đường từ '/:userId/delete1' thành '/:userId/hard_delete' để khớp với frontend
+router.delete('/:userId/hard_delete', authMiddleware, adminMiddleware, async (req, res) => {
+    console.log('Backend: Hard delete route hit for userId:', req.params.userId);
+    try {
+        // Kiểm tra nếu admin cố gắng xóa chính tài khoản của mình
+        // req.user.id là _id của người dùng đang đăng nhập (từ JWT)
+        // user._id.toString() là _id của người dùng được tìm thấy trong DB
+        // req.params.userId là userId tùy chỉnh (ví dụ: USER000000017)
+        // Logic đúng phải so sánh _id (từ token) với _id của người dùng đang bị xóa
+        const userToDelete = await User.findOne({ userId: req.params.userId });
 
-// @route   DELETE /api/user-management/users/:userId
-// @desc    Xóa VĨNH VIỄN người dùng khỏi hệ thống (hard delete)
-// @access  Private (Chỉ Admin)
-// router.delete('/:userId/hard_delete', authMiddleware, adminMiddleware, async (req, res) => {
-//     try {
-//         // Tìm người dùng bằng userId
-//         const user = await User.findOne({ userId: req.params.userId });
+        if (!userToDelete) {
+            return res.status(404).json({ message: 'Không tìm thấy người dùng để xóa.' });
+        }
 
-//         if (!user) {
-//             return res.status(404).json({ message: 'Không tìm thấy người dùng để xóa.' });
-//         }
+        if (req.user.id === userToDelete._id.toString()) {
+            return res.status(400).json({ message: 'Bạn không thể tự hủy.' });
+        }
 
-//         // Kiểm tra nếu admin cố gắng xóa chính tài khoản của mình
-//         if (req.user.id === user._id.toString()) {
-//             return res.status(400).json({ message: 'Bạn không thể tự hủy.' });
-//         }
+        // Xóa VĨNH VIỄN người dùng khỏi database
+        await User.findOneAndDelete({ userId: req.params.userId });
 
-//         // Xóa VĨNH VIỄN người dùng khỏi database
-//         // Sử dụng findOneAndDelete để xóa và trả về tài liệu đã xóa (nếu tìm thấy)
-//         await User.findOneAndDelete({ userId: req.params.userId });
+        res.status(200).json({
+            message: `Người dùng "${userToDelete.username}" đã được xóa VĨNH VIỄN khỏi hệ thống.`,
+        });
 
-//         res.status(200).json({
-//             message: `Người dùng "${user.username}" đã được xóa VĨNH VIỄN khỏi hệ thống.`,
-//         });
+    } catch (error) {
+        console.error('Lỗi khi xóa VĨNH VIỄN người dùng:', error.message);
+        res.status(500).send('Lỗi máy chủ khi xóa người dùng.');
+    }
+});
 
-//     } catch (error) {
-//         console.error('Lỗi khi xóa VĨNH VIỄN người dùng:', error.message);
-//         res.status(500).send('Lỗi máy chủ khi xóa người dùng.');
-//     }
-// });
+
+
+
 router.patch('/:userId/role', authMiddleware, adminMiddleware, async (req, res) => {
     const { role } = req.body; // status sẽ là chuỗi 'true' hoặc 'false'
 
