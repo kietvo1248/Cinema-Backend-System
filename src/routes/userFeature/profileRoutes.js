@@ -13,7 +13,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
     try {
         // req.user.id được gán từ authMiddleware sau khi xác minh JWT
         // Tìm người dùng theo ID và loại bỏ trường mật khẩu
-        const user = await User.findById(req.user.id).select('-password');
+        const user = await User.findById(req.user.userId).select('-password');
         
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tìm thấy.' });

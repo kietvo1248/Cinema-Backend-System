@@ -29,6 +29,11 @@ const authMiddleware = (req, res, next) => {
         // Gắn thông tin người dùng từ payload đã giải mã vào đối tượng request (req.user).
         req.user = decoded.user;
 
+        if (!req.user || !req.user.userId) {
+            console.error('Lỗi xác minh token: Payload không chứa userId.');
+            return res.status(401).json({ message: 'Token không hợp lệ: Thiếu thông tin người dùng.' });
+        }
+
         next();
     } catch (error) {
         console.error('Lỗi xác minh token:', error.message);

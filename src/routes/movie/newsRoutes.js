@@ -164,7 +164,11 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
 
     // Nếu có file ảnh mới
     if (req.file) {
-      newsItem.image_url = `/uploads/${req.file.filename}`;
+      const uploadedImage = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'movie-news'
+      });
+      fs.unlinkSync(req.file.path); // Xoá file tạm sau upload
+      newsItem.image_url = uploadedImage.secure_url;
     }
 
     await newsItem.save();

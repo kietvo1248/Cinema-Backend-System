@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
       Movie.find({ status: 'now_showing', is_deleted: false }).select(commonFields),
       Movie.find({ status: 'coming_soon', is_deleted: false }).select(commonFields),
       Movie.find({ is_hot: true, is_deleted: false }).select(commonFields),
-      MovieNews.find({ is_deleted: false }).sort({ createdAt: -1 }).limit(4) //lấy 4 tin tức mới nhất
+      MovieNews.find({ is_deleted: false }).sort({ createdAt: -1 }).limit(8) //lấy 4 tin tức mới nhất
     ]);
 
     const banners = bannerMovies

@@ -1,6 +1,23 @@
 const mongoose = require('mongoose');
 const Counter = require('./Counter');
 
+
+const occupiedSeatEntrySchema = new mongoose.Schema({
+    seatLabel: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    bookingId: { // Reference to the booking that occupied this seat
+        type: String,
+        ref: 'Booking',
+        required: true
+    },
+    showtime: { // The specific showtime this seat is occupied for
+        type: Date,
+        required: true
+    }
+}, { _id: false });
 // Sub-schema cho mỗi ghế
 const seatSchema = new mongoose.Schema({
   row: {
@@ -48,19 +65,19 @@ const roomSchema = new mongoose.Schema({
     type: Number,
     required: [true, 'Số hàng ghế là bắt buộc'],
     min: [1, 'Số hàng ghế phải lớn hơn 0'],
-    max: [50, 'Số hàng ghế không được vượt quá 50']
+    max: [12, 'Số hàng ghế không được vượt quá 50']
   },
   columns: {
     type: Number,
     required: [true, 'Số cột ghế là bắt buộc'],
     min: [1, 'Số cột ghế phải lớn hơn 0'],
-    max: [50, 'Số cột ghế không được vượt quá 50']
+    max: [14, 'Số cột ghế không được vượt quá 50']
   },
   quantity: {
     type: Number,
     required: [true, 'Số lượng ghế là bắt buộc'],
     min: [1, 'Số lượng ghế phải lớn hơn 0'],
-    max: [500, 'Số lượng ghế không được vượt quá 500']
+    max: [168, 'Số lượng ghế không được vượt quá 500']
   },
   roomType: {
     type: String,
@@ -75,7 +92,8 @@ const roomSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  seats: [seatSchema]
+ seats: [seatSchema], 
+  occupiedSeats: [occupiedSeatEntrySchema] 
 }, {
   timestamps: true,
   collection: 'room'
@@ -90,7 +108,7 @@ roomSchema.pre('save', async function (next) {
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
       );
-      this.roomId = 'ROOM' + String(counter.seq).padStart(9, '0');
+      this.roomId = 'ROOM' + String(counter.seq).padStart(1, '0');
     } catch (error) {
       return next(error);
     }

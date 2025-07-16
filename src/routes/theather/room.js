@@ -146,7 +146,7 @@ router.get('/', authMiddleware, adminMiddleware, async (req, res) => {
  *       500:
  *         description: Lỗi máy chủ.
  */
-router.get('/:roomId', authMiddleware, adminMiddleware, async (req, res) => {
+router.get('/:roomId', authMiddleware, async (req, res) => {
     try {
         const room = await Room.findOne({ roomId: req.params.roomId }).select('-__v -_id');
         if (!room) {
@@ -276,6 +276,7 @@ router.patch('/:roomId/update-seat-types', authMiddleware, adminMiddleware, asyn
  */
 router.delete('/:roomId/delete', authMiddleware, adminMiddleware, async (req, res) => {
     try {
+        console.log('>> roomId:', req.params.roomId); // Log roomId
         const room = await Room.findOne({ roomId: req.params.roomId });
 
         if (!room) {
@@ -298,3 +299,361 @@ router.delete('/:roomId/delete', authMiddleware, adminMiddleware, async (req, re
 });
 
 module.exports = router;
+
+
+/**
+ * @swagger
+ * /api/theater/rooms/{roomId}/edit:
+ *   put:
+ *     summary: Cập nhật thông tin phòng chiếu
+ *     tags: [Room Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của phòng chiếu
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               roomName:
+ *                 type: string
+ *               rows:
+ *                 type: integer
+ *               columns:
+ *                 type: integer
+ *               roomType:
+ *                 type: string
+ *                 enum: ["2D", "3D", "IMAX"]
+ *               normalPrice:
+ *                 type: number
+ *               vipPrice:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công.
+ *       400:
+ *         description: Dữ liệu không hợp lệ.
+ *       404:
+ *         description: Không tìm thấy phòng.
+ *       500:
+ *         description: Lỗi máy chủ.
+ */
+router.put('/:roomId/edit', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { roomName, rows, columns, roomType, normalPrice, vipPrice } = req.body;
+
+    // Validate đầu vào
+    if (
+      !roomName || typeof roomName !== 'string' ||
+      !rows || !columns || !roomType ||
+      typeof normalPrice !== 'number' || typeof vipPrice !== 'number'
+    ) {
+      return res.status(400).json({ message: 'Dữ liệu không hợp lệ.' });
+    }
+
+    const room = await Room.findOne({ roomId: req.params.roomId });
+    if (!room) {
+      return res.status(404).json({ message: 'Không tìm thấy phòng.' });
+    }
+
+    // Cập nhật các thông tin cơ bản
+    room.roomName = roomName;
+    room.rows = rows;
+    room.columns = columns;
+    room.roomType = roomType;
+    room.quantity = rows * columns;
+
+    // Tạo lại danh sách ghế với các thông tin mới
+    const newSeats = [];
+    for (let r = 1; r <= rows; r++) {
+      const rowLetter = String.fromCharCode(64 + r);
+      for (let c = 1; c <= columns; c++) {
+        const label = `${rowLetter}${c}`;
+        const oldSeat = room.seats.find(seat => seat.label === label);
+        const type = oldSeat?.type || 'Normal';
+        const price = type === 'VIP' ? vipPrice : normalPrice;
+
+        newSeats.push({ row: r, column: c, label, type, price });
+      }
+    }
+
+    room.seats = newSeats;
+    await room.save();
+
+    res.status(200).json({ message: 'Cập nhật phòng thành công.', room });
+  } catch (error) {
+    console.error('Lỗi cập nhật phòng:', error.message);
+    res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật phòng.' });
+  }
+});
+
+
+
+
+/**
+ * @swagger
+ * /api/theater/rooms/{roomId}:
+ *   patch:
+ *     summary: Cập nhật thông tin phòng chiếu
+ *     tags: [Room Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               roomName:
+ *                 type: string
+ *               rows:
+ *                 type: number
+ *               columns:
+ *                 type: number
+ *               roomType:
+ *                 type: string
+ *                 enum: ["2D", "3D", "IMAX"]
+ *     responses:
+ *       200:
+ *         description: Cập nhật thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       404:
+ *         description: Không tìm thấy phòng
+ */
+router.patch('/:roomId', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const { roomName, rows, columns, roomType } = req.body;
+
+    const room = await Room.findOne({ roomId });
+    if (!room) {
+      return res.status(404).json({ message: 'Không tìm thấy phòng.' });
+    }
+
+    let updated = false;
+
+    if (roomName && typeof roomName === 'string') {
+      room.roomName = roomName;
+      updated = true;
+    }
+
+    if (
+      typeof rows === 'number' &&
+      typeof columns === 'number' &&
+      rows > 0 &&
+      columns > 0 &&
+      (rows !== room.rows || columns !== room.columns)
+    ) {
+      room.rows = rows;
+      room.columns = columns;
+      room.quantity = rows * columns;
+
+      // Regenerate seats (default Normal, use old prices if possible)
+      const newSeats = [];
+      const normalPrice = room.seats[0]?.price || 50000;
+      for (let r = 1; r <= rows; r++) {
+        const rowLetter = String.fromCharCode(64 + r);
+        for (let c = 1; c <= columns; c++) {
+          newSeats.push({
+            row: r,
+            column: c,
+            label: `${rowLetter}${c}`,
+            type: 'Normal',
+            price: normalPrice,
+          });
+        }
+      }
+      room.seats = newSeats;
+      updated = true;
+    }
+
+    if (roomType && ['2D', '3D', 'IMAX'].includes(roomType)) {
+      room.roomType = roomType;
+      updated = true;
+    }
+
+    if (!updated) {
+      return res.status(400).json({ message: 'Không có dữ liệu nào được thay đổi.' });
+    }
+
+    await room.save();
+
+    res.status(200).json({ message: 'Cập nhật phòng chiếu thành công.', room });
+  } catch (err) {
+    console.error('Lỗi khi cập nhật phòng:', err.message);
+    res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật phòng.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/theater/rooms/{roomId}/update-prices:
+ *   patch:
+ *     summary: Cập nhật giá ghế VIP và Normal cho tất cả các ghế hiện có (không thay đổi loại ghế)
+ *     tags: [Room Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID của phòng
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               vipPrice:
+ *                 type: number
+ *               normalPrice:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Cập nhật giá ghế thành công
+ *       400:
+ *         description: Dữ liệu không hợp lệ
+ *       404:
+ *         description: Không tìm thấy phòng
+ */
+router.patch('/:roomId/update-prices', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { vipPrice, normalPrice } = req.body;
+
+    if (
+      (typeof vipPrice !== 'number' && typeof normalPrice !== 'number')
+    ) {
+      return res.status(400).json({ message: 'Cần cung cấp ít nhất một giá để cập nhật.' });
+    }
+
+    const room = await Room.findOne({ roomId: req.params.roomId });
+    if (!room) {
+      return res.status(404).json({ message: 'Không tìm thấy phòng.' });
+    }
+
+    room.seats = room.seats.map(seat => {
+      if (seat.type === 'VIP' && typeof vipPrice === 'number') {
+        seat.price = vipPrice;
+      }
+      if (seat.type === 'Normal' && typeof normalPrice === 'number') {
+        seat.price = normalPrice;
+      }
+      return seat;
+    });
+
+    await room.save();
+
+    res.status(200).json({
+      message: 'Cập nhật giá ghế thành công.',
+      updated: { vipPrice, normalPrice }
+    });
+  } catch (err) {
+    console.error('Lỗi cập nhật giá ghế:', err.message);
+    res.status(500).json({ message: 'Lỗi máy chủ khi cập nhật giá ghế.' });
+  }
+});
+
+
+// [Swagger] PATCH - Update is_actived status
+/**
+ * @swagger
+ * /api/theater/rooms/{roomId}/status:
+ *   patch:
+ *     summary: Kích hoạt/Vô hiệu hóa phòng chiếu
+ *     tags: [Room Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               is_actived:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Cập nhật trạng thái thành công.
+ *       404:
+ *         description: Không tìm thấy phòng.
+ */
+router.patch('/:roomId/status', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { is_actived } = req.body;
+    const room = await Room.findOneAndUpdate(
+      { roomId: req.params.roomId },
+      { is_actived },
+      { new: true }
+    );
+    if (!room) {
+      return res.status(404).json({ message: 'Không tìm thấy phòng.' });
+    }
+    res.status(200).json({ message: 'Cập nhật trạng thái thành công.', room });
+  } catch (err) {
+    console.error('Lỗi cập nhật trạng thái:', err);
+    res.status(500).json({ message: 'Lỗi máy chủ.' });
+  }
+});
+
+// [Swagger] DELETE - Xóa vĩnh viễn phòng chiếu
+/**
+ * @swagger
+ * /api/theater/rooms/{roomId}/hard_delete:
+ *   delete:
+ *     summary: Xóa vĩnh viễn phòng chiếu
+ *     tags: [Room Management]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: roomId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Phòng đã bị xóa vĩnh viễn.
+ *       404:
+ *         description: Không tìm thấy phòng.
+ */
+router.delete('/:roomId/hard_delete', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const deleted = await Room.findOneAndDelete({ roomId: req.params.roomId });
+    if (!deleted) {
+      return res.status(404).json({ message: 'Không tìm thấy phòng.' });
+    }
+    res.status(200).json({ message: `Phòng "${req.params.roomId}" đã bị xóa vĩnh viễn.` });
+  } catch (err) {
+    console.error('Lỗi xóa vĩnh viễn:', err);
+    res.status(500).json({ message: 'Lỗi máy chủ.' });
+  }
+});
+
+module.exports = router;
+
