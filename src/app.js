@@ -21,6 +21,8 @@ const movieNewsRoutes = require('./routes/movie/newsRoutes'); // Import tuyến 
 const bookingRoutes = require('./routes/booking/bookingRoute'); // Import tuyến quản lý đặt vé
 const paymentRoutes = require('./routes/payments/vnPaySandboxRotes'); // Import tuyến thanh toán VNPay Sandbox
 const bookingManagementRoutes = require('./routes/booking/bookingManagement'); // Import tuyến quản lý đặt vé
+const commentsRoutes = require('./routes/movie/commentsRoutes');
+
 // Khởi tạo ứng dụng Express
 
 const app = express();
@@ -65,7 +67,7 @@ app.use('/api/product', productRoutes);
 app.use('/api/combo', comboRoutes);
 //tuyến quản lý tin tức
 app.use('/api/movie-news', movieNewsRoutes);
-
+app.use('/api/comments', commentsRoutes);
 
 
 // // Tuyến mặc định cho kiểm tra server

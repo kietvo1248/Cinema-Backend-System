@@ -5,30 +5,36 @@ const jwt = require('jsonwebtoken'); // Import jsonwebtoken để tạo và xác
 const authMiddleware = require('../../middleware/authMiddleware'); // Import middleware xác thực JWT
 const adminMiddleware = require('../../middleware/adminMiddleware'); // Middleware kiểm tra quyền quản trị viên
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer'); 
-const dotenv = require('dotenv'); 
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
+const { OAuth2Client } = require('google-auth-library');
+const { v4: uuidv4 } = require('uuid'); // Thư viện để tạo ID ngẫu nhiên
+
 // import model
 const User = require('../../models/User'); // Import User model
 const form = require('../authentication/view/forgotPasswordForm');
 
-dotenv.config(); 
+dotenv.config();
 
 // Cấu hình Nodemailer transporter(không được sờ)
 const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE, 
+    service: process.env.EMAIL_SERVICE,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
-    
 });
+
+// Khởi tạo Google OAuth client
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Client ID của bạn từ GCP
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 // @route   POST /api/auth/register
 // @desc    Đăng ký người dùng mới
 // @access  Public
 router.post('/register', async (req, res) => {
     // Lấy username, fullname, password, role, email, gender, id_card, phone, address, is_actived, is_deleted từ req.body
-    const { userId, username, fullname, password, role, email, gender,date_of_birth , id_card, phone, address, is_actived, is_deleted } = req.body;
+    const { userId, username, fullname, password, role, email, gender, date_of_birth, id_card, phone, address, is_actived, is_deleted } = req.body;
 
     try {
         // Kiểm tra xem người dùng đã tồn tại chưa bằng username
@@ -39,7 +45,7 @@ router.post('/register', async (req, res) => {
 
         // Tạo người dùng mới với các trường được truyền vào
         // Mật khẩu sẽ được mã hóa tự động thông qua middleware 'pre-save' trong User model
-        const newUser = new User({ userId, username, fullname, password, role: 'customer', email, gender,date_of_birth ,id_card, phone, address, is_deleted, is_actived });
+        const newUser = new User({ userId, username, fullname, password, role: 'customer', email, gender, date_of_birth, id_card, phone, address, is_deleted, is_actived });
 
         await newUser.save(); // Lưu người dùng mới vào database
 
@@ -128,7 +134,7 @@ router.get('/profile', authMiddleware, async (req, res) => {
         // req.user.id được gán từ authMiddleware sau khi xác minh JWT
         // Tìm người dùng theo ID và loại bỏ trường mật khẩu
         const user = await User.findById(req.user.userId).select('-password');
-        
+
         if (!user) {
             return res.status(404).json({ message: 'Người dùng không tìm thấy.' });
         }
@@ -149,33 +155,33 @@ router.get('/profile', authMiddleware, async (req, res) => {
 // @access  Private
 router.put('/update-profile', authMiddleware, async (req, res) => {
     const { fullname, email, gender, phone, date_of_birth } = req.body;
-  
+
     try {
-      const user = await User.findById(req.user.userId);
-      if (!user) {
-        return res.status(404).json({ message: 'Người dùng không tìm thấy.' });
-      }
-  
-      if (fullname !== undefined) user.fullname = fullname;
-      if (email !== undefined) user.email = email;
-      if (gender !== undefined) user.gender = gender;
-      if (phone !== undefined) user.phone = phone;
-      if (date_of_birth !== undefined) user.date_of_birth = date_of_birth;
-  
-      await user.save();
-  
-      const updatedUser = await User.findById(req.user.userId).select('-password');
-      res.status(200).json({
-        message: 'Thông tin tài khoản đã được cập nhật thành công!',
-        user: updatedUser
-      });
-  
+        const user = await User.findById(req.user.userId);
+        if (!user) {
+            return res.status(404).json({ message: 'Người dùng không tìm thấy.' });
+        }
+
+        if (fullname !== undefined) user.fullname = fullname;
+        if (email !== undefined) user.email = email;
+        if (gender !== undefined) user.gender = gender;
+        if (phone !== undefined) user.phone = phone;
+        if (date_of_birth !== undefined) user.date_of_birth = date_of_birth;
+
+        await user.save();
+
+        const updatedUser = await User.findById(req.user.userId).select('-password');
+        res.status(200).json({
+            message: 'Thông tin tài khoản đã được cập nhật thành công!',
+            user: updatedUser
+        });
+
     } catch (error) {
-      console.error('Lỗi khi cập nhật thông tin người dùng:', error.message);
-      res.status(500).send('Lỗi máy chủ khi cập nhật thông tin.');
+        console.error('Lỗi khi cập nhật thông tin người dùng:', error.message);
+        res.status(500).send('Lỗi máy chủ khi cập nhật thông tin.');
     }
-  });
-  
+});
+
 
 // @route   PUT /api/auth/change-password
 // @desc    Đổi mật khẩu cho người dùng đã đăng nhập
@@ -249,7 +255,7 @@ router.post('/forgot-password', async (req, res) => {
         // 4. Lưu mã và thời gian hết hạn vào người dùng
         user.resetPasswordCode = resetCode;
         user.resetPasswordExpires = resetExpires;
-        
+
         await user.save();
 
         let emailContent = form;
@@ -271,7 +277,7 @@ router.post('/forgot-password', async (req, res) => {
         });
 
 
-    }catch (error) {
+    } catch (error) {
         console.error('Lỗi khi yêu cầu đặt lại mật khẩu:', error.message);
         res.status(500).send('Lỗi máy chủ.');
     }
@@ -319,7 +325,7 @@ router.post('/verify-reset-code', async (req, res) => {
 // @route   POST /api/auth/reset-password
 // @desc    Đặt lại mật khẩu mới cho người dùng
 router.post('/reset-password', async (req, res) => {
-    const { newPassword, confirmPassword} = req.body;
+    const { newPassword, confirmPassword } = req.body;
     const resetToken = req.header('Authorization');
 
     if (!resetToken) {
@@ -341,7 +347,7 @@ router.post('/reset-password', async (req, res) => {
         // Xác minh resetToken (tương tự authMiddleware nhưng không cần gán req.user)
         const actualResetToken = resetToken.startsWith('Bearer ') ? resetToken.slice(7, resetToken.length) : resetToken;
         const decoded = jwt.verify(actualResetToken, process.env.JWT_SECRET);
-        
+
         // Tìm người dùng bằng ID từ payload của resetToken
         const user = await User.findById(decoded.user.userId);
         if (!user) {
@@ -349,7 +355,7 @@ router.post('/reset-password', async (req, res) => {
         }
         user.password = newPassword;
         user.markModified('password');
-        
+
         // không xài nữa thì vứt
         user.resetPasswordCode = undefined;
         user.resetPasswordExpires = undefined;
@@ -358,7 +364,7 @@ router.post('/reset-password', async (req, res) => {
 
         res.status(200).json({ message: 'Mật khẩu đã được đặt lại thành công!' });
 
-        } catch (error) {
+    } catch (error) {
         if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
             return res.status(401).json({ message: 'Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.' });
         }
@@ -403,6 +409,138 @@ router.patch('/:userId/status', authMiddleware, adminMiddleware, async (req, res
     } catch (error) {
         console.error('Lỗi khi cập nhật trạng thái hoạt động của người dùng:', error.message);
         res.status(500).send('Lỗi máy chủ khi cập nhật trạng thái người dùng.');
+    }
+});
+
+
+// Sử dụng Google Identity Services (GIS - Recommended):
+
+// Là bộ thư viện mới nhất của Google, đơn giản hóa việc triển khai.
+
+// Hỗ trợ cả One Tap Sign-in và tùy chỉnh nút đăng nhập.
+
+// Frontend nhận ID token (JWT) trực tiếp từ Google sau khi người dùng đăng nhập.
+
+// Frontend gửi ID token này đến backend.
+
+// Backend xác minh ID token (rất quan trọng) và tạo session/JWT cho người dùng.
+
+router.post('/google', async (req, res) => {
+    const { idToken } = req.body; // ID token nhận từ frontend
+
+    if (!idToken) {
+        return res.status(400).json({ message: 'ID token is missing.' });
+    }
+
+    try {
+        // 1. Xác minh ID token với Google
+        const ticket = await client.verifyIdToken({
+            idToken: idToken,
+            audience: GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const googleId = payload.sub; // ID duy nhất của người dùng Google
+        const email = payload.email;
+        const name = payload.name; // Tên đầy đủ
+        const picture = payload.picture; // URL ảnh đại diện
+
+        // Kiểm tra xem email đã được xác minh bởi Google chưa
+        if (!payload.email_verified) {
+            return res.status(401).json({ message: 'Google email not verified.' });
+        }
+
+        // 2. Tìm hoặc tạo người dùng trong cơ sở dữ liệu của bạn
+        let user = await User.findOne({ googleId: googleId });
+
+        if (!user) {
+            // Trường hợp: Người dùng chưa tồn tại với googleId này
+            // Kiểm tra xem email đã được đăng ký bằng phương pháp khác chưa (vd: đăng ký thường)
+            let existingUserByEmail = await User.findOne({ email });
+
+            if (existingUserByEmail) {
+                // Email đã tồn tại nhưng chưa liên kết với Google ID này.
+                return res.status(409).json({
+                    message: 'Email này đã được đăng ký bằng một tài khoản khác. Vui lòng đăng nhập bằng mật khẩu hoặc liên kết tài khoản.',
+                    linkAccount: true
+                });
+            }
+            const temp_pass= uuidv4(); // Tạo mật khẩu tạm thời ngẫu nhiên
+            // Nếu không có email và googleId nào tồn tại, tạo người dùng mới
+            // KHÔNG CẦN GÁN userId Ở ĐÂY, middleware pre('save') sẽ lo!
+            user = new User({
+                googleId: googleId,
+                username: null, // Sẽ là null vì không có từ Google
+                password: temp_pass, // Sẽ là null vì không có mật khẩu
+                email: email,
+                fullname: name || email,
+                gender: 'male', // Giá trị mặc định hoặc null
+                date_of_birth: null,
+                id_card: null,
+                phone: null,
+                address: null,
+                role: 'customer', // Mặc định là customer
+                is_actived: true,
+                is_deleted: false,
+                // profilePicture: picture, // Bỏ comment nếu muốn lưu ảnh đại diện
+            });
+
+            await user.save(); // Lưu người dùng mới vào database. userId sẽ được tạo tại đây.
+            console.log(`[Google Auth] New user created: ${user.email} (userId: ${user.userId})`);
+
+        } else {
+            // Trường hợp: Người dùng đã tồn tại với googleId này
+            // Cập nhật thông tin profile (tên, ảnh) nếu có thay đổi
+            user.fullname = name || user.fullname;
+            user.email = email;
+            // user.profilePicture = picture || user.profilePicture; // Bỏ comment nếu muốn cập nhật ảnh
+            await user.save();
+            console.log(`[Google Auth] Existing user logged in: ${user.email} (userId: ${user.userId})`);
+        }
+
+        // 3. Tạo JWT cho người dùng trong hệ thống của bạn
+        // Đảm bảo payload của JWT khớp với cấu trúc bạn mong đợi ở frontend (decoded.user.role)
+        const googlePayload = {
+            user: {
+                googleId: user.googleId,
+                userId: user._id, // Dùng userId đã được gán bởi middleware
+                username: user.username,
+                fullname: user.fullname,
+                role: user.role
+            }
+        };
+
+        // // Debugging JWT_SECRET và payload
+        // console.log('DEBUG: googlePayload:', googlePayload);
+        // console.log('DEBUG: Type of googlePayload:', typeof googlePayload);
+        // console.log('DEBUG: process.env.JWT_SECRET:', JWT_SECRET); // Dùng JWT_SECRET biến cục bộ đã check type ở trên
+        // console.log('DEBUG: Type of process.env.JWT_SECRET:', typeof JWT_SECRET);
+
+        // if (typeof JWT_SECRET !== 'string' || !JWT_SECRET) {
+        //     console.error('JWT_SECRET is not a valid string or is undefined!');
+        //     return res.status(500).json({ message: 'Server configuration error: JWT secret is invalid.' });
+        // }
+
+        const token = jwt.sign(googlePayload, process.env.JWT_SECRET, { // Sử dụng biến cục bộ JWT_SECRET
+            expiresIn: '1h'
+        });
+
+        // 4. Gửi JWT và thông tin người dùng về frontend
+        res.status(200).json({
+            message: 'Đăng nhập Google thành công',
+            token,
+            // Thêm thông tin user trực tiếp vào response để tiện cho frontend
+            user: {
+                fullname: user.fullname,
+                email: user.email,
+                role: user.role,
+                profilePicture: user.profilePicture // Bỏ comment nếu có lưu
+            }
+        });
+
+    } catch (error) {
+        console.error('Google ID token verification or processing failed:', error); // Log toàn bộ lỗi
+        res.status(401).json({ message: 'Xác thực Google thất bại. Vui lòng thử lại.' });
     }
 });
 

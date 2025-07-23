@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     },
     username: {
         type: String,
-        required: [true, 'Username là bắt buộc.'],
+        // required: [true, 'Username là bắt buộc.'],
         trim: true, // Loại bỏ khoảng trắng ở đầu và cuối
         minlength: [3, 'Ít nhất phải 3 kí tự'], // Độ dài tối thiểu cho username
         maxlength: [20, 'Tối đa 20 kí tự'], // Độ dài tối đa cho username
@@ -20,14 +20,14 @@ const userSchema = new mongoose.Schema({
     },
     fullname: { // Thêm trường fullname
         type: String,
-        required: true,
+        // required: true,
         trim: true,
         minlength: [3, 'Ít nhất phải 3 kí tự'], // Độ dài tối thiểu cho fullname
         maxlength: [50, 'Tối đa 50 kí tự'] // Độ dài tối đa cho fullname
     },
     password: {
         type: String,
-        required: true,
+        // required: true,
         minlength: [5, 'Ít nhất 5 kí tự'] // Độ dài tối thiểu cho mật khẩu
 
     },
@@ -79,6 +79,10 @@ const userSchema = new mongoose.Schema({
         type: String,
         // required: true,
         trim: true
+    },
+    googleId: { // Thêm trường googleId để lưu trữ ID từ Google OAuth
+        type: String,
+        unique: true // Đảm bảo googleId là duy nhất
     },
     is_actived: { // Trường is_actived để đánh dấu người dùng đã kích hoạt hay chưa
         type: Boolean,

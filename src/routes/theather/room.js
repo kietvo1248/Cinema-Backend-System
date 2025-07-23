@@ -655,5 +655,24 @@ router.delete('/:roomId/hard_delete', authMiddleware, adminMiddleware, async (re
   }
 });
 
+
+// GET /api/theater/rooms/:roomId/occupied-seats
+router.get('/:roomId/occupied-seats', async (req, res) => {
+  try {
+    const { roomId } = req.params;
+    const room = await Room.findOne({ roomId });
+
+    if (!room) {
+      return res.status(404).json({ message: 'Room not found' });
+    }
+
+    res.status(200).json({ occupiedSeats: room.occupiedSeats || [] });
+  } catch (error) {
+    console.error('Error fetching occupied seats:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+
 module.exports = router;
 
