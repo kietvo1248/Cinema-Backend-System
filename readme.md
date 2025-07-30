@@ -2,6 +2,20 @@ Cinema Backend System (Node.js, Express, MongoDB, JWT)
 =====================================
 Introduction
 This project is a RESTful API backend for a cinema system, built with Node.js, Express, and MongoDB. It provides core functionalities for user authentication, including registration, login, and protected routes, using Bcrypt for secure password hashing and JSON Web Tokens (JWT) for session management.
+<img src="https://scontent.fsgn2-8.fna.fbcdn.net/v/t39.30808-6/290612422_750526599597283_3367313551794571151_n.jpg?_nc_cat=102&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeEXg4eKZV55FcUNSuV4EL_IrjLjKCTuDLCuMuMoJO4MsLZ2-nex5CDASFdzw0c8YXrDBmLbG2wexIljxuQjglyT&_nc_ohc=2UvAL8NeJlIQ7kNvwHL5SVP&_nc_oc=AdnnyvoH-Jw_WWx6o9QY8UcQgOdSiffABvqtklx2hDN8EcQ7bP_6ACB1zfzxRfalMxU&_nc_zt=23&_nc_ht=scontent.fsgn2-8.fna&_nc_gid=Bx21P6OUynhcea-V24AzpA&oh=00_AfSYf0RErLqc2WeQstJtZfLyBAtHWG_PqZ7ta8RUg5bxbg&oe=688F70CD" />
+<img src="https://i.ytimg.com/vi/2P8p1P-kGyw/maxresdefault.jpg" />
+<img src="https://sohanews.sohacdn.com/zoom/700_438/160588918557773824/2023/12/7/photo1701922722163-1701922722307797925176.jpg" />
+<img src="https://cdnphoto.dantri.com.vn/8HCEsdkRMM0BNgBrV9E8zFBKEXU=/thumb_w/1020/2023/07/27/1554134331712214183201933810056015126893647n-edited-1690442070141.jpeg" />
+<img src="https://langnghesondong.com.vn/wp-content/uploads/2023/09/Thich-Tam-Phuc-3.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/p2kwmry3gvhtfvek55np.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/uizthlwguvuysom8nq3a.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/rsvu7txb4qizuzuonoxr.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/n96cztwiokvahcnbrych.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/fi7kdtktrquugvnumwv8.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850515/rxvquj4xymxmwwglwffa.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850514/h1qml1nce7dleldwrox8.jpg" />
+<img src="https://res.cloudinary.com/dsqbxgh88/image/upload/v1753850515/xdi9kjzngn4ygei5odos.jpg" />    
+
 
 Key Features
 User Registration: Create new user accounts with username, full name, password, and role.
