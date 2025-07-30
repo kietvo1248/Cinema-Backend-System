@@ -25,9 +25,10 @@ const invoiceSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    paymentMethod: {
+    paymentMethod: { // Phương thức thanh toán được sử dụng
         type: String,
-        default: 'VNPAY'
+        enum: ['NONE', 'VNPAY', 'PAYOS', 'CASH'],
+        default: 'NONE'
     },
     paymentStatus: {
         type: String, // 'success', 'failed', 'pending', 'cancelled'
@@ -46,6 +47,17 @@ const invoiceSchema = new mongoose.Schema({
         vnp_TxnRef: String,
         vnp_SecureHash: String,
         // Có thể thêm các trường khác nếu cần
+    },
+    payosDetails: { // Lưu trữ chi tiết phản hồi từ PayOS
+        orderCode: { type: Number },
+        transactionId: { type: Number }, // ID giao dịch từ PayOS (nếu có)
+        amount: { type: Number },
+        description: { type: String },
+        status: { type: String }, // 'PAID', 'CANCELLED', 'FAILED', etc.
+        paymentMethod: { type: String }, // 'VIETQR', 'ZALO_PAY', etc.
+        paidAt: { type: Date }, // Thời gian thanh toán thành công
+        checksum: { type: String }, // Chữ ký nhận được từ PayOS (tùy chọn)
+        _id: false // Không tạo _id cho subdocument này
     },
     qrCodeDataUrl: String, // Nếu bạn muốn lưu QR Code
 }, { timestamps: true,

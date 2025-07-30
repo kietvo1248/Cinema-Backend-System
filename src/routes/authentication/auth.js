@@ -304,7 +304,8 @@ router.post('/verify-reset-code', async (req, res) => {
         // Token này chỉ dùng để xác thực cho bước reset-password
         const resetTokenPayload = {
             user: {
-                id: user.userId
+                // id: user.userId
+                userId: user._id, // Sử dụng _id để lấy ID người dùng
             }
         };
 

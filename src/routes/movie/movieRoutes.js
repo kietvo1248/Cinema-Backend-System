@@ -355,11 +355,11 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+
 router.post('/check-showtime-conflict', async (req, res) => {
   try {
     const { cinema_room, showTimes, startDate, endDate, runningTime } = req.body;
 
-    // ✅ Validate đầu vào
     if (!cinema_room || !Array.isArray(showTimes) || !startDate || !endDate || !runningTime) {
       return res.status(400).json({ message: 'Thiếu dữ liệu đầu vào hoặc không hợp lệ' });
     }
@@ -370,62 +370,114 @@ router.post('/check-showtime-conflict', async (req, res) => {
       return res.status(400).json({ message: 'Ngày bắt đầu hoặc kết thúc không hợp lệ' });
     }
 
-    const BUFFER = 20; // phút dọn dẹp
+    const BUFFER = 20;
+    const totalDuration = runningTime + BUFFER;
 
-    // ✅ Tìm phim đang chiếu trong khoảng thời gian đó trong cùng phòng
+    // 🔍 Lấy tất cả phim đang chiếu trong cùng phòng, giao với khoảng ngày yêu cầu
     const existingMovies = await Movie.find({
       cinema_room: cinema_room,
       start_date: { $lte: end.toDate() },
       end_date: { $gte: start.toDate() },
     });
 
+    // ✅ 1. Tính toàn bộ blockedSlots: convert suất chiếu về 1 ngày mẫu
+    const referenceDay = "2025-01-01";
+    const blockedSlots = [];
+
+    for (const movie of existingMovies) {
+      if (!Array.isArray(movie.showtimes) || !movie.running_time) continue;
+
+      for (const time of movie.showtimes) {
+        const st = dayjs(`${referenceDay}T${time}`);
+        const et = st.add(movie.running_time + BUFFER, 'minute');
+        blockedSlots.push({ start: st, end: et });
+      }
+    }
+
+    // ✅ 2. Tính các khung giờ gợi ý (không trùng giờ phim nào trong khoảng ngày)
+    const suggestions = [];
+    let current = dayjs(`${referenceDay}T07:00`);
+    const latest = dayjs(`${referenceDay}T23:00`);
+
+    while (current.add(totalDuration, 'minute').isBefore(latest)) {
+      const endTime = current.add(totalDuration, 'minute');
+
+      const isSafe = blockedSlots.every(({ start, end }) =>
+        endTime.isBefore(start) || current.isAfter(end)
+      );
+
+      if (isSafe) {
+        suggestions.push(current.format("HH:mm"));
+      }
+
+      current = current.add(15, 'minute'); // bước nhảy 15 phút
+    }
+
+    // ✅ 3. (Tùy chọn) Kiểm tra conflict thực tế nếu có showTimes được chọn sẵn
     const conflicts = [];
 
-    for (let date = start.clone(); date.isBefore(end.add(1, 'day')); date = date.add(1, 'day')) {
-      const dateStr = date.format('YYYY-MM-DD');
+    if (showTimes.length > 0) {
+      for (let date = start.clone(); date.isBefore(end.add(1, 'day')); date = date.add(1, 'day')) {
+        const dateStr = date.format('YYYY-MM-DD');
 
-      for (const movie of existingMovies) {
-        if (!Array.isArray(movie.showtimes) || !movie.running_time) continue;
+        for (const movie of existingMovies) {
+          for (const time of movie.showtimes) {
+            const st = dayjs(`${dateStr}T${time}`);
+            const et = st.add(movie.running_time + BUFFER, 'minute');
 
-        for (const existingTime of movie.showtimes) {
-          const existingStart = dayjs(`${dateStr}T${existingTime}`);
-          if (!existingStart.isValid()) continue;
+            for (const newTime of showTimes) {
+              const newStart = dayjs(`${dateStr}T${newTime}`);
+              const newEnd = newStart.add(totalDuration, 'minute');
 
-          const existingEnd = existingStart.add(movie.running_time + BUFFER, 'minute');
-
-          for (const newTime of showTimes) {
-            const newStart = dayjs(`${dateStr}T${newTime}`);
-            if (!newStart.isValid()) continue;
-
-            const newEnd = newStart.add(runningTime + BUFFER, 'minute');
-
-            const isOverlap = newStart.isBefore(existingEnd) && existingStart.isBefore(newEnd);
-
-            if (isOverlap) {
-              conflicts.push({
-                date: dateStr,
-                existingMovie: movie.name,
-                existingTime,
-                newTime,
-              });
+              const isOverlap = newStart.isBefore(et) && st.isBefore(newEnd);
+              if (isOverlap) {
+                conflicts.push({
+                  date: dateStr,
+                  existingTime: st.format("HH:mm"),
+                  newTime: newStart.format("HH:mm"),
+                  existingMovie: movie.name || "Không rõ"
+                });
+              }
             }
           }
         }
       }
     }
 
-    if (conflicts.length > 0) {
-      return res.status(200).json({
-        conflict: true,
-        message: 'Trùng suất chiếu với các phim khác trong cùng phòng',
-        conflicts,
-      });
+    // ✅ 4. Kiểm tra xung đột nội bộ giữa các suất mới
+    const internalConflicts = [];
+
+    for (let i = 0; i < showTimes.length; i++) {
+      const timeA = showTimes[i];
+      const startA = dayjs(`${referenceDay}T${timeA}`);
+      const endA = startA.add(totalDuration, 'minute');
+
+      for (let j = i + 1; j < showTimes.length; j++) {
+        const timeB = showTimes[j];
+        const startB = dayjs(`${referenceDay}T${timeB}`);
+        const endB = startB.add(totalDuration, 'minute');
+
+        const isOverlap = startA.isBefore(endB) && startB.isBefore(endA);
+        if (isOverlap) {
+          internalConflicts.push({ newTimeA: timeA, newTimeB: timeB });
+        }
+      }
     }
 
+
     return res.status(200).json({
-      conflict: false,
-      message: 'Không có xung đột suất chiếu',
+      conflict: conflicts.length > 0 || internalConflicts.length > 0,
+      message:
+        conflicts.length > 0
+          ? 'Trùng suất chiếu với các phim khác trong cùng phòng'
+          : internalConflicts.length > 0
+            ? 'Các suất chiếu bị trùng với nhau'
+            : 'Không có xung đột suất chiếu',
+      conflicts,
+      internalConflicts,
+      suggestedShowtimes: suggestions,
     });
+
 
   } catch (err) {
     console.error('💥 Lỗi server:', err);

@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors'); // Import cors để xử lý Cross-Origin Resource Sharing
 require('dotenv').config();
+const http = require('http');
 
 
 // Import các tuyến (routes) từ thư mục routes
@@ -19,9 +20,11 @@ const comboRoutes = require('./routes/product/comboRoutes'); // Import tuyến q
 const movieNewsRoutes = require('./routes/movie/newsRoutes'); // Import tuyến quản lý tin tức
 
 const bookingRoutes = require('./routes/booking/bookingRoute'); // Import tuyến quản lý đặt vé
-const paymentRoutes = require('./routes/payments/vnPaySandboxRotes'); // Import tuyến thanh toán VNPay Sandbox
+const vnpayRoutes = require('./routes/payments/vnPaySandboxRotes'); // Import tuyến thanh toán VNPay Sandbox
+const payosRoutes = require('./routes/payments/payosRoutes'); // Import tuyến thanh toán PayOS
 const bookingManagementRoutes = require('./routes/booking/bookingManagement'); // Import tuyến quản lý đặt vé
 const commentsRoutes = require('./routes/movie/commentsRoutes');
+const repliesRoutes = require('./routes/movie/repliesRoutes');
 
 // Khởi tạo ứng dụng Express
 
@@ -58,7 +61,8 @@ app.use('/api/promotions', promotionRoutes);
 
 // tuyến quản lý đặt vé
 app.use('/api/booking', bookingRoutes); // tuyến quản lý đặt vé
-app.use('/api/payment', paymentRoutes); // tuyến thanh toán 
+app.use('/api/vnpay-payment', vnpayRoutes); // tuyến thanh toán 
+app.use('/api/payos-payment', payosRoutes); // tuyến thanh toán 
 app.use('/api/booking-management', bookingManagementRoutes); // tuyến quản lý đặt vé (Admin)
 // tuyến quản lý phòng
 app.use('/api/theater/rooms', roomManagermentRoutes);
@@ -68,6 +72,8 @@ app.use('/api/combo', comboRoutes);
 //tuyến quản lý tin tức
 app.use('/api/movie-news', movieNewsRoutes);
 app.use('/api/comments', commentsRoutes);
+app.use('/api/replies', repliesRoutes);
+
 
 
 // // Tuyến mặc định cho kiểm tra server

@@ -46,20 +46,20 @@ const bookingSchema = new mongoose.Schema({
         type: Date,
     },
     // Thêm trường paymentDetails để lưu thông tin từ VNPAY
-    paymentDetails: {
-        vnp_Amount: { type: Number },
-        vnp_BankCode: { type: String },
-        vnp_CardType: { type: String },
-        vnp_OrderInfo: { type: String },
-        vnp_PayDate: { type: String }, // YYYYMMDDHHmmss
-        vnp_ResponseCode: { type: String },
-        vnp_TmnCode: { type: String },
-        vnp_TransactionNo: { type: String },
-        vnp_TransactionStatus: { type: String },
-        vnp_TxnRef: { type: String },
-        vnp_SecureHash: { type: String },
-        message: { type: String }, // Trường để lưu thêm thông tin lỗi nếu có
-    },
+    // paymentDetails: {
+    //     vnp_Amount: { type: Number },
+    //     vnp_BankCode: { type: String },
+    //     vnp_CardType: { type: String },
+    //     vnp_OrderInfo: { type: String },
+    //     vnp_PayDate: { type: String }, // YYYYMMDDHHmmss
+    //     vnp_ResponseCode: { type: String },
+    //     vnp_TmnCode: { type: String },
+    //     vnp_TransactionNo: { type: String },
+    //     vnp_TransactionStatus: { type: String },
+    //     vnp_TxnRef: { type: String },
+    //     vnp_SecureHash: { type: String },
+    //     message: { type: String }, // Trường để lưu thêm thông tin lỗi nếu có
+    // },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     
