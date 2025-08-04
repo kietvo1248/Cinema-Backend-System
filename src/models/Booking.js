@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const bookingSchema = new mongoose.Schema({
     bookingId: { type: String}, // Đảm bảo trường này có
+    payosOrderCode: { type: Number }, // Mã đơn hàng PayOS, đảm bảo duy nhất
+    vnpayTransactionId: { type: String }, // Mã giao dịch VNPAY, đảm bảo duy nhất
     movieDetails: {
         movieId: { type: String },
         name: { type: String, required: true },

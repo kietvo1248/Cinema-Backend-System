@@ -98,7 +98,7 @@ router.post('/create', authMiddleware, async (req, res) => {
         // }
 
         // Tạo một bookingId duy nhất 
-        const uniqueBookingId = 'BKG' + Date.now();;
+        const uniqueBookingId = Date.now();
 
         // Thiết lập thời gian hết hạn cho việc giữ chỗ (ví dụ: 10 phút)
         const EXPIRATION_TIME_MINUTES = 20;

@@ -487,4 +487,43 @@ router.post('/check-showtime-conflict', async (req, res) => {
 
 
 
+/**
+ * @swagger
+ * /api/movies/{id}/toggle-hot:
+ *   patch:
+ *     tags:
+ *       - Movie
+ *     summary: Chuyển đổi trạng thái hot của phim
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Cập nhật trạng thái hot thành công
+ *       404:
+ *         description: Không tìm thấy phim
+ */
+router.patch('/:id/toggle-hot', async (req, res) => {
+  try {
+    const movie = await Movie.findById(req.params.id);
+    if (!movie) {
+      return res.status(404).json({ error: 'Không tìm thấy phim' });
+    }
+
+    movie.is_hot = !movie.is_hot;
+    await movie.save();
+
+    res.json({
+      message: `Đã cập nhật trạng thái hot cho phim "${movie.name}"`,
+      is_hot: movie.is_hot
+    });
+  } catch (err) {
+    console.error('❌ Lỗi khi cập nhật trạng thái hot:', err);
+    res.status(500).json({ error: 'Cập nhật trạng thái hot thất bại', details: err.message });
+  }
+});
+
 module.exports = router;

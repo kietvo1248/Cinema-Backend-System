@@ -37,6 +37,7 @@ async function createOrUpdateInvoice(booking, amountFromVNPAY, vnpayDetails, pay
 
         if (!invoice) {
             const newInvoiceData = {
+                invoiceCode: `INV-${Date.now()}-${booking.bookingId.slice(-4)}`,
                 booking: booking._id,
                 bookingId: booking.bookingId,
                 userId: booking.user._id,
