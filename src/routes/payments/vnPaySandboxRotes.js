@@ -8,7 +8,7 @@ const querystring = require('qs');
 const authMiddleware = require('../../middleware/authMiddleware');
 const Booking = require('../../models/Booking');
 const Invoice = require('../../models/Invoice');
-const VnPayConfig = require('../../config/VnPayConfig');
+const VnPayConfig = require('../../config/vnPayConfig');
 
 // Hàm sắp xếp đối tượng theo key (giữ nguyên)
 function sortObject(obj) {
