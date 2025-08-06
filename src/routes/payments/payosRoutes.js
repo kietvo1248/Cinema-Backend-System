@@ -209,7 +209,7 @@ router.post('/create-payment', async (req, res) => {
             expiredAt: Math.floor(Date.now() / 1000) + 900, // Hết hạn sau 15 phút (900 giây)
             buyerName: userName,
             buyerEmail: userEmail,
-            callbackUrl: callbackUrl
+            // callbackUrl: callbackUrl
             // Thêm items nếu PayOS yêu cầu và có trong booking
             // items: booking.selectedCombos.map(combo => ({
             //     name: combo.name,
@@ -227,7 +227,7 @@ router.post('/create-payment', async (req, res) => {
         // Chuẩn bị payload cho PayOS API
         const payosRequestPayload = {
             ...orderData,
-            callbackUrl: callbackUrl,
+            // callbackUrl: callbackUrl,
             signature: signature, // Thêm signature vào body theo logic mới của bạn
             // Thêm callbackUrl vào đây nếu PayOS yêu cầu nó trong body API call
             // Ví dụ: callbackUrl: callbackUrl,

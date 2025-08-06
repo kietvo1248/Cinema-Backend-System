@@ -1,4 +1,4 @@
-# Cinema Backend System (Node.js, Express, MongoDB, JWT)
+# Cinema Backend System (Node.js, Express, MongoDB, JWT) ( ͡° ͜ʖ ͡°)
 
 ## Introduction
 
